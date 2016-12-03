@@ -2,13 +2,15 @@ import os
 
 class Coordinate(object):
     keypad = (
-    (1, 2, 3),
-    (4, 5, 6),
-    (7, 8, 9),
+    (None, None, '1' , None, None,),
+    (None, '2' , '3' , '4' , None,),
+    ('5' , '6' , '7' , '8' , '9' ,),
+    (None, 'A' , 'B' , 'C' , None,),
+    (None, None, 'D' , None, None,),
     )
 
-    keypad_height = 2
-    keypad_width = 2
+    keypad_height = 4
+    keypad_width = 4
 
     def __init__(self, x, y):
         self.x = x
@@ -40,17 +42,17 @@ class Coordinate(object):
 
 def run(raw_data):
     values = []
-    coord = Coordinate(1, 1)
+    coord = Coordinate(2, 0)
     for line in raw_data:
         for c in line:
             if c not in 'UDRL':
                 raise ValueError('{} not in UDRL'.format(c))
 
-            coord = getattr(coord, c)()
-        #     print '######', coord.value()
-        # print '###', coord.value()    
+            new_coord = getattr(coord, c)()
+            if new_coord.value() is not None:
+                coord = new_coord
         values.append(coord.value())
-    return ''.join([str(v) for v in values])
+    return ''.join(values)
 
 if __name__ == '__main__':
     input_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'input.txt')
