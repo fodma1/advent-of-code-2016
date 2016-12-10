@@ -2,6 +2,10 @@ import numpy as np
 import os
 import re
 
+FULL_RECT = u"\u25AE"
+EMPTY_RECT = ' '
+
+
 class Screen(object):
     rect_matcher = re.compile(r'rect (?P<width>\d+)x(?P<height>\d+)')
     rotate_matcher = re.compile(r'rotate (?P<direction>\w*) [xy]=(?P<number>\d+) by (?P<amount>\d+)')
@@ -37,6 +41,20 @@ class Screen(object):
             raise ValueError(msg)
 
     @property
+    def repr(self):
+        ret = ''
+        # import pdb; pdb.set_trace()
+        for start_index in range(0, self.matrix.shape[1], 5):
+            section = self.matrix[:, start_index: start_index + 5]
+            new_item = []
+            for line in self.matrix:
+                new_item.append(''.join([FULL_RECT if c else EMPTY_RECT for c in line]))
+            ret += '\n'.join(new_item)
+            ret +='\n\n'
+        return ret
+
+
+    @property
     def pixels_on(self):
         return self.matrix[self.matrix==1]
 
@@ -44,7 +62,7 @@ def run(raw_data):
     screen = Screen(50, 6)
     for line in raw_data:
         screen.apply(line)
-    return len(screen.pixels_on)
+    return screen.repr
 
 
 if __name__ == '__main__':
