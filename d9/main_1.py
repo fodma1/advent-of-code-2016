@@ -14,6 +14,7 @@ def splitter(line, n):
 
 
 def streamer(input_file):
+    # It's the best way to accomplish clojure behaviour
     scope = {'line': input_file.readline().strip()}
     def inner(n):
         if len(scope['line']) > n:
@@ -21,19 +22,41 @@ def streamer(input_file):
             return ret_line
         else:
             remainder = scope['line']
-            new_line = input_file.readline().strip()
-            if new_line:
-                scope['line'] = new_line
-                import pdb; pdb.set_trace()
-                rest = inner(n - len(remainder))
-                return remainder + rest if rest else ''
-            else:
+            scope['line'] = input_file.readline().strip()
+            if not scope['line']:
                 return remainder
+            rest = inner(n - len(remainder))
+            return remainder + rest
     return inner
 
+def stream_guard(gen):
+    def inner(n):
+        next_part = gen(n)
+        if not next_part:
+            raise StopIteration
+        return next_part
+    return inner
 
 def decoder(input_file):
-    pass
+    gen = stream_guard(streamer(input_file))
+    while True:
+        try:
+            next_char = gen(1)
+        except StopIteration:
+            break
+        if next_char != '(':
+            yield next_char
+        else:
+            expression = next_char
+            while True:
+                next_char = gen(1)
+                expression += next_char
+                if next_char == ')':
+                    break
+            match = re.match(r'\((?P<length>\d+)x(?P<times>\d+)\)', expression)
+            length = int(match.group('length'))
+            times = int(match.group('times'))
+            yield gen(length) * times
 
 
 def run(input_file):
