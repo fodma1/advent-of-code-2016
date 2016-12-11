@@ -1,79 +1,34 @@
 import os
 import re
 
-
-def gen_length(gen):
-    length = 0
-    for part in gen:
-        length += len(part)
-    return length
-
+matcher = re.compile(r'^(?P<pre>[A-Z]*)\((?P<length>\d+)x(?P<times>\d+)\)(?P<rest>[A-Z\(\)0-9x]*)')
 
 def splitter(line, n):
     return line[:n], line[n:]
 
-class Streamer(object):
-
-    def __init__(self, input_file):
-        self.file = input_file
-        self.line = None
-        self._buffer_line()
-
-    def _buffer_line(self):
-        self.line = self.file.readline().strip()
-
-    def _read(self, n):
-        if len(self.line) > n:
-            ret_line, self.line = splitter(self.line, n)
-            return ret_line
-        else:
-            remainder = self.line
-            self._buffer_line()
-            if not self.line:
-                return remainder
-            rest = inner(n - len(remainder))
-            return remainder + rest
-
-    def read(self, n):
-        next_part = self._read(n)
-        if not next_part:
-            raise StopIteration
-        return next_part
-
-    def feed_text(self, text):
-        import pdb; pdb.set_trace()
-        self.line = text + self.line
+def gen_length(line):
+    match = matcher.match(line)
+    if match:
+        pre = match.group('pre')
+        length = int(match.group('length'))
+        times = int(match.group('times'))
+        rest = match.group('rest')
+        to_repreat, rest= splitter(rest, length)
+        return len(pre) + gen_length(to_repreat) * times + gen_length(rest)
+    else:
+        return len(line)
 
 
-def decoder(input_file):
-    gen = Streamer(input_file)
-    while True:
-        try:
-            next_char = gen.read(1)
-        except StopIteration:
-            break
-        if next_char != '(':
-            yield next_char
-        else:
-            expression = next_char
-            while True:
-                next_char = gen.read(1)
-                expression += next_char
-                if next_char == ')':
-                    break
-            match = re.match(r'\((?P<length>\d+)x(?P<times>\d+)\)', expression)
-            length = int(match.group('length'))
-            times = int(match.group('times'))
-            gen.feed_text(gen.read(length) * times)
-
-def run(input_file):
-    return gen_length(decoder(input_file))
+def run(data):
+    return gen_length(data)
 
 
 if __name__ == '__main__':
     input_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'input.txt')
     input_file = open(input_path, 'r')
+    raw_data = ''.join([l.strip() 
+        for l in input_file.readlines() if l.strip()])
 
-    ret = run(input_file)
-    # Expect 74532
+    ret = run(raw_data)
+    #  expect 11558231665
     print ret
