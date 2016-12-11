@@ -12,36 +12,44 @@ def gen_length(gen):
 def splitter(line, n):
     return line[:n], line[n:]
 
+class Streamer(object):
 
-def streamer(input_file):
-    # It's the best way to accomplish clojure behaviour
-    scope = {'line': input_file.readline().strip()}
-    def inner(n):
-        if len(scope['line']) > n:
-            ret_line, scope['line'] = splitter(scope['line'], n)
+    def __init__(self, input_file):
+        self.file = input_file
+        self.line = None
+        self._buffer_line()
+
+    def _buffer_line(self):
+        self.line = self.file.readline().strip()
+
+    def _read(self, n):
+        if len(self.line) > n:
+            ret_line, self.line = splitter(self.line, n)
             return ret_line
         else:
-            remainder = scope['line']
-            scope['line'] = input_file.readline().strip()
-            if not scope['line']:
+            remainder = self.line
+            self._buffer_line()
+            if not self.line:
                 return remainder
             rest = inner(n - len(remainder))
             return remainder + rest
-    return inner
 
-def stream_guard(gen):
-    def inner(n):
-        next_part = gen(n)
+    def read(self, n):
+        next_part = self._read(n)
         if not next_part:
             raise StopIteration
         return next_part
-    return inner
+
+    def feed_text(self, text):
+        import pdb; pdb.set_trace()
+        self.line = text + self.line
+
 
 def decoder(input_file):
-    gen = stream_guard(streamer(input_file))
+    gen = Streamer(input_file)
     while True:
         try:
-            next_char = gen(1)
+            next_char = gen.read(1)
         except StopIteration:
             break
         if next_char != '(':
@@ -49,15 +57,14 @@ def decoder(input_file):
         else:
             expression = next_char
             while True:
-                next_char = gen(1)
+                next_char = gen.read(1)
                 expression += next_char
                 if next_char == ')':
                     break
             match = re.match(r'\((?P<length>\d+)x(?P<times>\d+)\)', expression)
             length = int(match.group('length'))
             times = int(match.group('times'))
-            yield gen(length) * times
-
+            gen.feed_text(gen.read(length) * times)
 
 def run(input_file):
     return gen_length(decoder(input_file))
